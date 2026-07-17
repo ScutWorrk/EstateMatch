@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estate Match - Admin Console</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Smooth transition for the sidebar */
+        #sidebar {
+            transition: margin 0.3s ease-in-out;
+        }
+        /* Class that hides the sidebar by pulling it left */
+        #sidebar.collapsed {
+            margin-left: -260px; 
+        }
+        .hover-underline:hover {
+            text-decoration: underline !important;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+<div class="d-flex vh-100 overflow-hidden bg-light">
+
+    <div id="sidebar" class="d-flex flex-column flex-shrink-0 p-3 text-white" style="width: 260px; background-color: #1e1e2f;">
+        <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+            <h4 class="fw-bold mb-0">🏠 Estate Match</h4>
+        </a>
+        <hr>
+        <ul class="nav nav-pills flex-column mb-auto">
+            <li class="nav-item mb-2">
+                <a href="#" class="nav-link active text-white shadow-sm" style="background-color: #4a4a75;">
+                    ⚙️ Admin Panel
+                </a>
+            </li>
+        </ul>
+        <hr>
+        <div>
+            <div class="d-flex align-items-center">
+                <div class="rounded-circle bg-secondary text-white d-flex justify-content-center align-items-center me-2" style="width: 40px; height: 40px;">
+                    {{ session['username'][0] | upper }}
+                </div>
+                <div>
+                    <strong class="d-block">{{ session['username'] }}</strong>
+                    <small class="text-white-50 text-uppercase" style="font-size: 0.75rem;">{{ session['role'] }}</small>
+                </div>
+            </div>
+            <a href="/logout" class="text-white-50 text-decoration-none small d-block mt-3">🚪 Logout</a>
+        </div>
+    </div>
+
+    <div class="flex-grow-1 d-flex flex-column p-4 overflow-hidden">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-shrink-0">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-light text-primary border-0 shadow-sm me-3 fs-5" onclick="toggleSidebar()">☰</button>
+                <div>
+                    <h2 class="text-dark mb-0">Administrator Console</h2>
+                    <small class="text-muted">Inventory control and system performance metrics.</small>
+                </div>
+            </div>
+            
+            <ul class="nav nav-pills bg-white p-1 rounded border shadow-sm" id="adminTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="overview-tab" data-bs-toggle="pill" data-bs-target="#overview" type="button" role="tab">Overview</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="inventory-tab" data-bs-toggle="pill" data-bs-target="#inventory" type="button" role="tab">Inventory</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="users-tab" data-bs-toggle="pill" data-bs-target="#users" type="button" role="tab">Users</button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="flex-grow-1 overflow-y-auto pe-2 pb-4">
+            <div class="tab-content" id="adminTabsContent">
+                
+                <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-3 mb-3">
+                            <div class="card p-4 shadow-sm border-0 border-start border-success border-4 h-100">
+                                <h6 class="text-muted fw-bold mb-1">TOTAL LISTINGS</h6>
+                                <h2 class="mb-0" id="metric-total">0</h2>
+                                <small class="text-success">Active in database</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card p-4 shadow-sm border-0 border-start border-primary border-4 h-100">
+                                <h6 class="text-muted fw-bold mb-1">AVG. LISTING PRICE</h6>
+                                <h2 class="mb-0" id="metric-avg">RM 0</h2>
+                                <small class="text-muted" id="metric-stability">Market stability: Normal</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card p-4 shadow-sm border-0 border-start border-info border-4 h-100">
+                                <h6 class="text-muted fw-bold mb-1">ACTIVE AGENTS</h6>
+                                <h2 class="mb-0" id="metric-agents">0</h2>
+                                <small class="text-primary">Performance tracking enabled</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card p-4 shadow-sm border-0 border-start border-warning border-4 h-100">
+                                <h6 class="text-muted fw-bold mb-1">SALES RATIO</h6>
+                                <h2 class="mb-0" id="metric-sales-ratio">0%</h2>
+                                <small class="text-warning">Sold vs. Total Inventory</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <div class="card p-4 shadow-sm border-0 h-100">
+                                <h6 class="text-muted fw-bold mb-3">INVENTORY STATUS DISTRIBUTION</h6>
+                                <div style="position: relative; height: 250px; width: 100%;">
+                                    <canvas id="statusChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card p-4 shadow-sm border-0 h-100">
+                                <h6 class="text-muted fw-bold mb-3">PRICE DISTRIBUTION</h6>
+                                <div style="position: relative; height: 250px; width: 100%;">
+                                    <canvas id="priceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="tab-pane fade" id="inventory" role="tabpanel">
+                    <div class="card p-4 shadow-sm border-0">
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <input type="text" class="form-control w-25" id="inventorySearchInput" onkeyup="filterInventoryTable()" placeholder="Search properties, areas, or status...">
+                            <div>
+                                <button class="btn btn-outline-primary me-2" onclick="openAddModal()">+ Add Listing</button>
+                                <button class="btn btn-dark shadow-sm" onclick="triggerCSVUpload()">Bulk Upload (CSV)</button>
+                                <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
+                            </div>
+                        </div>
+
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light text-muted small sticky-top">
+                                <tr>
+                                    <th>PROPERTY DETAILS</th>
+                                    <th>FINANCIALS</th>
+                                    <th>STATUS</th>
+                                    <th class="text-end">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory_table_body">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">Loading inventory...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="users" role="tabpanel">
+                    <div class="card p-4 shadow-sm border-0">
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0 text-primary">System Access List</h5>
+                            <button class="btn btn-primary shadow-sm" onclick="openUserModal()">+ Add New User</button>
+                        </div>
+
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light text-muted small sticky-top">
+                                <tr>
+                                    <th>USER ID</th>
+                                    <th>USERNAME</th>
+                                    <th>SYSTEM ROLE</th>
+                                    <th class="text-end">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users_table_body">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">Loading users...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="viewPropertyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold" id="view_listing_name">Property Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm p-3">
+                            <h6 class="text-muted mb-3 border-bottom pb-2">🏠 Core Details</h6>
+                            <p class="mb-2"><small class="text-muted">Type:</small> <strong class="text-dark" id="view_type_name"></strong></p>
+                            <p class="mb-2"><small class="text-muted">Price:</small> <strong class="text-primary fs-5" id="view_price"></strong></p>
+                            <p class="mb-2"><small class="text-muted">Size:</small> <strong class="text-dark" id="view_size"></strong></p>
+                            <p class="mb-2"><small class="text-muted">Tenure:</small> <strong class="text-dark" id="view_tenure"></strong></p>
+                            <p class="mb-0"><small class="text-muted">Status:</small> <span id="view_status" class="badge"></span></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm p-3">
+                            <h6 class="text-muted mb-3 border-bottom pb-2">📐 Specifications</h6>
+                            <p class="mb-2"><small class="text-muted">Bedrooms:</small> <strong class="text-dark" id="view_beds"></strong></p>
+                            <p class="mb-2"><small class="text-muted">Bathrooms:</small> <strong class="text-dark" id="view_baths"></strong></p>
+                            <p class="mb-2"><small class="text-muted">Amenity Score:</small> <strong class="text-dark" id="view_amenity"></strong> <span class="text-muted small">/ 10</span></p>
+                            <p class="mb-0"><small class="text-muted">GPS Coordinates:</small><br> 
+                                <strong id="view_gps" class="text-secondary font-monospace" style="font-size: 0.9em;"></strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editPropertyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Edit Property Listing</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit_property_id">
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-muted small">LISTING NAME</label>
+                    <input type="text" class="form-control" id="edit_listing_name">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-muted small">PRICE (RM)</label>
+                    <input type="number" class="form-control" id="edit_price" step="1000">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-muted small">STATUS</label>
+                    <select class="form-select" id="edit_status">
+                        <option value="Active">Active</option>
+                        <option value="Sold">Sold</option>
+                        <option value="Off-Market">Off-Market</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="savePropertyChanges()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addPropertyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Add New Listing</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted small">LISTING NAME</label>
+                        <input type="text" class="form-control" id="add_listing_name" placeholder="e.g. Setia Eco Park">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted small">PRICE (RM)</label>
+                        <input type="number" class="form-control" id="add_price" step="1000">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label text-muted small fw-bold">PROPERTY CATEGORY</label>
+                        <select class="form-select border-primary" id="add_type_id">
+                            <option value="">-- Select Property Type --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted small">SIZE (SQFT)</label>
+                        <input type="number" class="form-control" id="add_size">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted small">AMENITY SCORE (1-10)</label>
+                        <input type="number" class="form-control" id="add_amenity" min="1" max="10" value="5">
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold text-muted small">BEDROOMS</label>
+                        <input type="number" class="form-control" id="add_bedrooms" value="3">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold text-muted small">BATHROOMS</label>
+                        <input type="number" class="form-control" id="add_bathrooms" value="2">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold text-muted small">TENURE</label>
+                        <select class="form-select" id="add_tenure">
+                            <option value="Freehold">Freehold</option>
+                            <option value="Leasehold">Leasehold</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold text-muted small">STATUS</label>
+                        <select class="form-select" id="add_status">
+                            <option value="Active">Active</option>
+                            <option value="Off-Market">Off-Market</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitNewProperty()">Save Listing</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="userModalTitle">Manage User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit_user_id">
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-muted small">USERNAME</label>
+                    <input type="text" class="form-control" id="edit_username" placeholder="e.g. agent_ahmad">
+                </div>
+
+                <div class="mb-3" id="password_field_container">
+                    <label class="form-label fw-bold text-muted small">TEMPORARY PASSWORD</label>
+                    <input type="password" class="form-control" id="edit_password" placeholder="Leave blank for 'password123'">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-muted small">ROLE</label>
+                    <select class="form-select" id="edit_user_role">
+                        <option value="Agent">Agent</option>
+                        <option value="Admin">Administrator</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveUser()">Save User</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    let currentInventory = []; 
+    let editModal = null; 
+    let addModal = null;
+    let currentUsers = [];
+    let userModalInstance = null;
+    let statusChartInstance = null;
+    let priceChartInstance = null;
+
+    window.onload = async function() {
+        await fetchAdminMetrics();
+        await fetchInventory();
+        await fetchUsers();
+        await fetchPropertyTypes();
+    };
+
+    async function fetchAdminMetrics() {
+        try {
+            const response = await fetch('/api/admin/metrics');
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                document.getElementById('metric-total').innerText = result.total_listings;
+                
+                const formattedPrice = result.avg_price.toLocaleString('en-MY', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                });
+                document.getElementById('metric-avg').innerText = `RM ${formattedPrice}`;
+                document.getElementById('metric-stability').innerText = `Market stability: ${result.stability}`;
+                document.getElementById('metric-agents').innerText = result.active_agents;
+            }
+        } catch (error) {
+            console.error("Error fetching metrics:", error);
+        }
+    }
+
+    function renderInventoryTable(dataToRender) {
+        const tableBody = document.getElementById('inventory_table_body');
+        tableBody.innerHTML = ''; 
+        
+        if (dataToRender.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">No properties found.</td></tr>';
+            return;
+        }
+        
+        dataToRender.forEach(prop => {
+            const formattedPrice = prop.price.toLocaleString('en-MY', { minimumFractionDigits: 2 });
+            const badgeClass = prop.status === 'Active' ? 'bg-success' : 'bg-secondary';
+            
+            tableBody.innerHTML += `
+                <tr>
+                    <td>
+                        <a href="#" onclick="viewPropertyDetails(${prop.property_id}); return false;" class="text-decoration-none fw-bold text-primary hover-underline">${prop.listing_name}</a><br>
+                        <small class="text-muted">${prop.size_sqft} sqft | ${prop.bedrooms} Bed | ${prop.bathrooms} Bath</small>
+                    </td>
+                    <td>
+                        <strong>RM ${formattedPrice}</strong><br>
+                        <small class="text-muted">${prop.tenure}</small>
+                    </td>
+                    <td>
+                        <span class="badge ${badgeClass}">${prop.status}</span>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary" onclick="openEditModal(${prop.property_id})">Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProperty(${prop.property_id})">Delete</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function viewPropertyDetails(id) {
+        const prop = currentInventory.find(p => p.property_id === id);
+        if (!prop) return;
+
+        document.getElementById('view_listing_name').innerText = prop.listing_name;
+        document.getElementById('view_type_name').innerText = prop.property_type_name || 'Standard Unit';
+        document.getElementById('view_price').innerText = "RM " + parseFloat(prop.price).toLocaleString('en-MY', { minimumFractionDigits: 2 });
+        document.getElementById('view_size').innerText = prop.size_sqft + " sqft";
+        document.getElementById('view_tenure').innerText = prop.tenure;
+        document.getElementById('view_beds').innerText = prop.bedrooms;
+        document.getElementById('view_baths').innerText = prop.bathrooms;
+        document.getElementById('view_amenity').innerText = prop.amenity_score;
+        document.getElementById('view_gps').innerText = `${prop.latitude}, ${prop.longitude}`;
+
+        const statusBadge = document.getElementById('view_status');
+        statusBadge.innerText = prop.status;
+        statusBadge.className = prop.status === 'Active' ? 'badge bg-success' : 'badge bg-secondary';
+
+        const viewModal = new bootstrap.Modal(document.getElementById('viewPropertyModal'));
+        viewModal.show();
+    }
+
+    function filterInventoryTable() {
+        const query = document.getElementById('inventorySearchInput').value.toLowerCase();
+
+        const filteredData = currentInventory.filter(prop => {
+            return prop.listing_name.toLowerCase().includes(query) ||
+                   prop.tenure.toLowerCase().includes(query) ||
+                   prop.status.toLowerCase().includes(query);
+        });
+
+        renderInventoryTable(filteredData);
+    }
+
+    async function fetchInventory() {
+        try {
+            const response = await fetch('/api/admin/inventory');
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                currentInventory = result.data;
+                renderInventoryTable(currentInventory); 
+                updateDashboardCharts(); 
+            } else {
+                document.getElementById('inventory_table_body').innerHTML = `<tr><td colspan="4" class="text-danger text-center py-4">Error loading inventory.</td></tr>`;
+            }
+        } catch (error) {
+            console.error("Error fetching inventory:", error);
+            document.getElementById('inventory_table_body').innerHTML = 
+                `<tr><td colspan="4" class="text-danger text-center py-4">Network error loading inventory.</td></tr>`;
+        }
+    }
+    
+    async function deleteProperty(id) {
+        if (confirm("Are you sure you want to permanently delete this listing?")) {
+            const response = await fetch(`/api/admin/inventory/${id}`, { method: 'DELETE' });
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                fetchInventory();
+                fetchAdminMetrics(); 
+            } else {
+                alert("Error deleting property.");
+            }
+        }
+    }
+
+    function openEditModal(id) {
+        const prop = currentInventory.find(p => p.property_id === id);
+        if (prop) {
+            document.getElementById('edit_property_id').value = prop.property_id;
+            document.getElementById('edit_listing_name').value = prop.listing_name;
+            document.getElementById('edit_price').value = prop.price;
+            document.getElementById('edit_status').value = prop.status;
+            
+            if (!editModal) {
+                editModal = new bootstrap.Modal(document.getElementById('editPropertyModal'));
+            }
+            editModal.show();
+        }
+    }
+
+    async function savePropertyChanges() {
+        const id = document.getElementById('edit_property_id').value;
+        const payload = {
+            listing_name: document.getElementById('edit_listing_name').value,
+            price: parseFloat(document.getElementById('edit_price').value),
+            status: document.getElementById('edit_status').value
+        };
+
+        const response = await fetch(`/api/admin/inventory/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            editModal.hide(); 
+            fetchInventory(); 
+            fetchAdminMetrics(); 
+        } else {
+            alert("Error updating property: " + result.error);
+        }
+    }
+
+    function triggerCSVUpload() {
+        document.getElementById('csvFileInput').click();
+    }
+
+    async function handleCSVUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadBtn = document.querySelector('button[onclick="triggerCSVUpload()"]');
+        const originalText = uploadBtn.innerText;
+        uploadBtn.innerText = "Uploading...";
+        uploadBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/admin/inventory/upload', {
+                method: 'POST',
+                body: formData 
+            });
+
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                alert(result.message);
+                location.reload(); 
+            } else {
+                alert("Upload Failed: " + result.message);
+            }
+        } catch (error) {
+            alert("Network Error: Could not upload file.");
+        } finally {
+            event.target.value = '';
+            uploadBtn.innerText = originalText;
+            uploadBtn.disabled = false;
+        }
+    }
+
+    function openAddModal() {
+        document.getElementById('add_listing_name').value = '';
+        document.getElementById('add_price').value = '';
+        document.getElementById('add_size').value = '';
+        document.getElementById('add_bedrooms').value = '3';
+        document.getElementById('add_bathrooms').value = '2';
+        document.getElementById('add_amenity').value = '5';
+        document.getElementById('add_tenure').value = 'Freehold';
+        document.getElementById('add_status').value = 'Active';
+
+        if (!addModal) {
+            addModal = new bootstrap.Modal(document.getElementById('addPropertyModal'));
+        }
+        addModal.show();
+    }
+
+    async function submitNewProperty() {
+        const payload = {
+            listing_name: document.getElementById('add_listing_name').value,
+            type_id: document.getElementById('add_type_id').value || null,
+            price: document.getElementById('add_price').value,
+            size_sqft: document.getElementById('add_size').value,
+            bedrooms: document.getElementById('add_bedrooms').value,
+            bathrooms: document.getElementById('add_bathrooms').value,
+            amenity_score: document.getElementById('add_amenity').value,
+            tenure: document.getElementById('add_tenure').value,
+            status: document.getElementById('add_status').value
+        };
+
+        if (!payload.listing_name || !payload.price || !payload.size_sqft) {
+            alert("Please fill in the Listing Name, Price, and Size.");
+            return;
+        }
+
+        const response = await fetch('/api/admin/inventory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            addModal.hide(); 
+            fetchInventory(); 
+            fetchAdminMetrics(); 
+        } else {
+            alert("Error adding property: " + result.error);
+        }
+    }
+
+    async function fetchUsers() {
+        try {
+            const response = await fetch('/api/admin/users');
+            const result = await response.json();
+            const tableBody = document.getElementById('users_table_body');
+            
+            if (result.status === 'success') {
+                currentUsers = result.data;
+                tableBody.innerHTML = ''; 
+                
+                if (result.data.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4">No users found.</td></tr>';
+                    return;
+                }
+                
+                result.data.forEach(user => {
+                    const roleBadge = user.role === 'Admin' ? 'bg-danger' : 'bg-primary';
+                    tableBody.innerHTML += `
+                        <tr>
+                            <td class="text-muted">#${user.user_id}</td>
+                            <td><strong>${user.username}</strong></td>
+                            <td><span class="badge ${roleBadge}">${user.role}</span></td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="openUserModal(${user.user_id})">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.user_id})">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch (error) {
+            console.error("Error fetching users:", error);
+        }
+    }
+
+    function openUserModal(id = null) {
+        const title = document.getElementById('userModalTitle');
+        
+        if (id) {
+            const user = currentUsers.find(u => u.user_id === id);
+            document.getElementById('edit_user_id').value = user.user_id;
+            document.getElementById('edit_username').value = user.username;
+            document.getElementById('edit_user_role').value = user.role;
+            title.innerText = "Edit User";
+        } else {
+            document.getElementById('edit_user_id').value = '';
+            document.getElementById('edit_username').value = '';
+            document.getElementById('edit_user_role').value = 'Agent';
+            title.innerText = "Add New User";
+        }
+
+        if (!userModalInstance) {
+            userModalInstance = new bootstrap.Modal(document.getElementById('userModal'));
+        }
+        userModalInstance.show();
+    }
+
+    async function saveUser() {
+        const id = document.getElementById('edit_user_id').value;
+        const username = document.getElementById('edit_username').value;
+        const role = document.getElementById('edit_user_role').value;
+        const password = document.getElementById('edit_password').value;
+
+        if (!username) {
+            alert("Username is required.");
+            return;
+        }
+
+        let message = `Are you sure you want to save the user "${username}"?`;
+        if (password) {
+            message += "\n\nNote: You have entered a new password, which will overwrite the existing one.";
+        } else {
+            message += "\n\nNote: No password entered; the existing password will remain unchanged.";
+        }
+
+        if (!confirm(message)) {
+            return; 
+        }
+
+        const payload = {
+            username: username,
+            role: role,
+            password: password
+        };
+
+        const method = id ? 'PUT' : 'POST';
+        const endpoint = id ? `/api/admin/users/${id}` : '/api/admin/users';
+
+        const response = await fetch(endpoint, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+            userModalInstance.hide();
+            fetchUsers();
+        } else {
+            alert("Error saving user: " + result.error);
+        }
+    }
+    
+    async function deleteUser(id) {
+        if (confirm("Permanently delete this user? This will also affect any clients assigned to them.")) {
+            const response = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                fetchUsers();
+            } else {
+                alert("Error deleting user. (Ensure they have no active clients tied to their ID).");
+            }
+        }
+    }
+
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+
+    function updateDashboardCharts() {
+        if (!currentInventory || currentInventory.length === 0) return;
+
+        let activeCount = 0;
+        let soldCount = 0;
+        let offMarketCount = 0;
+        let priceBins = [0, 0, 0, 0, 0]; 
+
+        currentInventory.forEach(prop => {
+            if (prop.status === 'Active') activeCount++;
+            else if (prop.status === 'Sold') soldCount++;
+            else offMarketCount++;
+
+            const p = prop.price;
+            if (p < 300000) priceBins[0]++;
+            else if (p < 500000) priceBins[1]++;
+            else if (p < 700000) priceBins[2]++;
+            else if (p < 900000) priceBins[3]++;
+            else priceBins[4]++;
+        });
+
+        const total = currentInventory.length;
+        const salesRatio = total > 0 ? Math.round((soldCount / total) * 100) : 0;
+        document.getElementById('metric-sales-ratio').innerText = salesRatio + '%';
+
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        if (statusChartInstance) statusChartInstance.destroy();
+        statusChartInstance = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Active', 'Sold', 'Off-Market'],
+                datasets: [{
+                    data: [activeCount, soldCount, offMarketCount],
+                    backgroundColor: ['#198754', '#ffc107', '#dc3545'], 
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%', 
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        const priceCtx = document.getElementById('priceChart').getContext('2d');
+        if (priceChartInstance) priceChartInstance.destroy();
+        priceChartInstance = new Chart(priceCtx, {
+            type: 'bar',
+            data: {
+                labels: ['< 300k', '300k-500k', '500k-700k', '700k-900k', '900k+'],
+                datasets: [{
+                    label: 'Properties',
+                    data: priceBins,
+                    backgroundColor: '#5a67d8', 
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } }, 
+                scales: { 
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    async function fetchPropertyTypes() {
+        try {
+            const response = await fetch('/api/admin/property_types');
+            const result = await response.json();
+            if (result.status === 'success') {
+                const typeSelect = document.getElementById('add_type_id');
+                result.data.forEach(pt => {
+                    typeSelect.innerHTML += `<option value="${pt.type_id}">${pt.display_name}</option>`;
+                });
+            }
+        } catch (error) {
+            console.error("Error loading property types:", error);
+        }
+    }
+
+</script>
+
+</body>
+</html>

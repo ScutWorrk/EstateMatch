@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estate Match - Client Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        /* Smooth transition for the sidebar */
+        #sidebar {
+            transition: margin 0.3s ease-in-out;
+        }
+        #sidebar.collapsed {
+            margin-left: -260px; 
+        }
+        /* Ensure map doesn't overlap other UI elements */
+        #map {
+            z-index: 1;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="d-flex vh-100 overflow-hidden bg-light">
+
+    <div id="sidebar" class="d-flex flex-column flex-shrink-0 p-3 text-white" style="width: 260px; background-color: #313182;">
+        <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+            <h4 class="fw-bold mb-0">🏠 Estate Match</h4>
+        </a>
+        <hr>
+        <ul class="nav nav-pills flex-column mb-auto">
+            <li class="nav-item mb-2">
+                <a href="/dashboard" class="nav-link text-white-50 hover-white">
+                    📊 Matching Analysis
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a href="/clients" class="nav-link active bg-primary text-white shadow-sm">
+                    👥 Clients
+                </a>
+            </li>
+        </ul>
+        <hr>
+        <div>
+            <div class="d-flex align-items-center">
+                <div class="rounded-circle bg-secondary text-white d-flex justify-content-center align-items-center me-2" style="width: 40px; height: 40px;">
+                    {{ session['username'][0] | upper if session.get('username') else 'A' }}
+                </div>
+                <div>
+                    <strong class="d-block">{{ session['username'] if session.get('username') else 'Agent' }}</strong>
+                    <small class="text-white-50 text-uppercase" style="font-size: 0.75rem;">{{ session['role'] if session.get('role') else 'AGENT' }}</small>
+                </div>
+            </div>
+            <a href="/logout" class="text-white-50 text-decoration-none small d-block mt-3">🚪 Logout</a>
+        </div>
+    </div>
+
+    <div class="flex-grow-1 d-flex flex-column p-4 overflow-hidden">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-light text-primary border-0 shadow-sm me-3 fs-5" onclick="toggleSidebar()">☰</button>
+                <div>
+                    <h2 class="text-primary mb-0">Client Management</h2>
+                    <small class="text-muted">Add, edit, or view buyer requirements.</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card p-4 shadow-sm mb-4 border-primary border-2 flex-shrink-0">
+            <h5 class="mb-4 text-dark">Create New Profile</h5>
+            
+            <div class="row">
+                <div class="col-md-5">
+                    <label class="form-label text-muted small fw-bold">FULL NAME</label>
+                    <input type="text" class="form-control mb-3" id="client_name" placeholder="e.g. Alice Johnson">
+                    
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">MAX BUDGET (RM)</label>
+                            <input type="number" class="form-control" id="max_budget" value="500000" step="10000">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">MIN BEDROOMS</label>
+                            <input type="number" class="form-control" id="min_bedrooms" value="2" min="1">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">PREFERRED PROPERTY TYPE</label>
+                        <select class="form-select border-primary" id="preferred_type_id">
+                            <option value="">-- Any Property Type --</option>
+                        </select>
+                    </div>
+                    
+                    <input type="hidden" id="edit_client_id" value=""> 
+                    <input type="hidden" id="w_price" value="8">
+                    <input type="hidden" id="w_size" value="5">
+                    <input type="hidden" id="w_amenities" value="4">
+                    <input type="hidden" id="w_location" value="5">
+                </div>
+                
+                <div class="col-md-7">
+                    <label class="form-label text-primary small fw-bold">POINT OF INTEREST (LOCATION FOCUS)</label>
+                    <div class="input-group mb-2">
+                        <input type="text" class="form-control border-primary" id="preferred_zone" placeholder="e.g. Sepang, KLCC, Evo Soho">
+                        <button class="btn btn-primary" type="button" onclick="searchMapLocation()">Search Map</button>
+                    </div>
+                    
+                    <div id="map" style="width: 100%; height: 220px; border-radius: 8px;" class="border shadow-sm mb-2"></div>
+                    
+                    <div class="row mb-3">
+                        <div class="col">
+                            <small class="text-muted">Lat: <span id="display_lat" class="fw-bold text-primary">3.139000</span></small>
+                        </div>
+                        <div class="col text-end">
+                            <small class="text-muted">Lng: <span id="display_lng" class="fw-bold text-primary">101.686900</span></small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end mt-2">
+                        <button class="btn btn-light me-2" onclick="resetForm()">Cancel</button>
+                        <button class="btn btn-primary px-4" id="saveBtn" onclick="saveClient()">Save Client</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 flex-grow-1 overflow-hidden d-flex flex-column" style="min-height: 400px;">
+            <div class="p-3 border-bottom bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-dark ms-2">Client Registry</h5>
+                <div class="input-group" style="max-width: 350px;">
+                    <span class="input-group-text bg-white text-muted border-end-0">🔍</span>
+                    <input type="text" class="form-control border-start-0 ps-0 shadow-none" id="searchInput" onkeyup="filterTable()" placeholder="Search by name, location, or budget...">
+                </div>
+            </div>
+
+            <div class="table-responsive flex-grow-1 overflow-y-auto p-4 pt-0">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-muted small sticky-top" style="z-index: 2;">
+                        <tr>
+                            <th class="pt-3 pb-3">CLIENT NAME</th>
+                            <th class="pt-3 pb-3">BUDGET</th>
+                            <th class="pt-3 pb-3">REQUIREMENTS</th>
+                            <th class="pt-3 pb-3">POI LABEL</th>
+                            <th class="text-end pt-3 pb-3">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="client_table_body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<script>
+    let savedClientsList = []; 
+    
+    // Global Map Variables
+    let clientMap = null;
+    let selectedMarker = null;
+    let selectedLat = 3.139000;
+    let selectedLng = 101.686900;
+
+    window.onload = async function() {
+        initClientMap(); // Boot up the map!
+        fetchClients();
+
+        await fetchPropertyTypes();
+    };
+
+    // --- LEAFLET MAP LOGIC ---
+    function initClientMap() {
+        if (clientMap) return; 
+
+        // Initialize map centered on KL/Selangor
+        clientMap = L.map('map').setView([selectedLat, selectedLng], 10);
+
+        // Load OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap'
+        }).addTo(clientMap);
+
+        // Render the draggable marker
+        selectedMarker = L.marker([selectedLat, selectedLng], { draggable: true }).addTo(clientMap);
+
+        // Update when user drags the pin
+        selectedMarker.on('dragend', function(e) {
+            let position = selectedMarker.getLatLng();
+            updateSelectedCoordinates(position.lat, position.lng);
+        });
+
+        // Update when user clicks the map
+        clientMap.on('click', function(e) {
+            selectedMarker.setLatLng(e.latlng);
+            updateSelectedCoordinates(e.latlng.lat, e.latlng.lng);
+        });
+        
+        // Force map to recalculate its size (fixes grey-box bug when rendering in flexboxes)
+        setTimeout(() => { clientMap.invalidateSize(); }, 200);
+    }
+
+    function updateSelectedCoordinates(lat, lng) {
+        selectedLat = lat;
+        selectedLng = lng;
+        document.getElementById('display_lat').innerText = lat.toFixed(6);
+        document.getElementById('display_lng').innerText = lng.toFixed(6);
+    }
+
+    // --- TABLE & CRUD LOGIC ---
+    function renderTable(dataToRender) {
+        const tableBody = document.getElementById('client_table_body');
+        tableBody.innerHTML = ''; 
+
+        if (dataToRender.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No clients found matching your search.</td></tr>';
+            return;
+        }
+
+        dataToRender.forEach(client => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td>
+                        <strong class="text-dark">${client.client_name}</strong><br>
+                        <small class="text-muted">ID: c${client.client_id}</small>
+                    </td>
+                    <td>RM ${client.max_budget.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</td>
+                    <td><span class="badge bg-primary bg-opacity-10 text-primary">${client.min_bedrooms}+ Bedrooms</span></td>
+                    <td class="text-muted fst-italic">${client.preferred_zone || 'Any'}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-link text-decoration-none" onclick="editClient(${client.client_id})">Edit</button>
+                        <button class="btn btn-sm btn-link text-danger text-decoration-none" onclick="deleteClient(${client.client_id})">Delete</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    async function fetchClients() {
+        const response = await fetch('/api/clients');
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            savedClientsList = result.data; 
+            renderTable(savedClientsList);
+        }
+    }
+
+    function filterTable() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const filteredData = savedClientsList.filter(client => {
+            return client.client_name.toLowerCase().includes(query) ||
+                   (client.preferred_zone && client.preferred_zone.toLowerCase().includes(query)) ||
+                   client.max_budget.toString().includes(query);
+        });
+        renderTable(filteredData);
+    }
+
+    async function deleteClient(id) {
+        if (confirm("Are you sure you want to delete this client? This cannot be undone.")) {
+            const response = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                fetchClients(); 
+            } else {
+                alert("Error deleting client.");
+            }
+        }
+    }
+
+    function editClient(id) {
+        const client = savedClientsList.find(c => c.client_id === id);
+        if (client) {
+            document.getElementById('edit_client_id').value = client.client_id;
+            document.getElementById('client_name').value = client.client_name;
+            document.getElementById('max_budget').value = client.max_budget;
+            document.getElementById('min_bedrooms').value = client.min_bedrooms;
+            document.getElementById('preferred_zone').value = client.preferred_zone || '';
+            document.getElementById('preferred_type_id').value = client.preferred_type_id || '';
+            
+            // Move the map to the client's saved coordinates
+            if (client.target_lat && client.target_lng) {
+                updateSelectedCoordinates(parseFloat(client.target_lat), parseFloat(client.target_lng));
+                clientMap.setView([selectedLat, selectedLng], 14); // Zoom in closer
+                selectedMarker.setLatLng([selectedLat, selectedLng]);
+            }
+            
+            document.getElementById('saveBtn').innerText = "Update Client";
+            document.getElementById('saveBtn').classList.replace('btn-primary', 'btn-warning');
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('edit_client_id').value = '';
+        document.getElementById('client_name').value = '';
+        document.getElementById('max_budget').value = '500000';
+        document.getElementById('min_bedrooms').value = '2';
+        document.getElementById('preferred_zone').value = '';
+        
+        // Reset map to default KL coordinates
+        updateSelectedCoordinates(3.139000, 101.686900);
+        clientMap.setView([selectedLat, selectedLng], 10);
+        selectedMarker.setLatLng([selectedLat, selectedLng]);
+        
+        document.getElementById('saveBtn').innerText = "Save Client";
+        document.getElementById('saveBtn').classList.replace('btn-warning', 'btn-primary');
+    }
+
+    async function saveClient() {
+        const clientId = document.getElementById('edit_client_id').value;
+        const isUpdate = clientId !== ""; 
+
+        const payload = {
+            client_name: document.getElementById('client_name').value,
+            preferred_zone: document.getElementById('preferred_zone').value,
+            preferred_type_id: document.getElementById('preferred_type_id').value,
+            max_budget: parseFloat(document.getElementById('max_budget').value),
+            min_bedrooms: parseInt(document.getElementById('min_bedrooms').value),
+            
+            // Send the exact GPS coordinates to the backend!
+            target_lat: selectedLat,
+            target_lng: selectedLng,
+            
+            w_price: document.getElementById('w_price').value / 10,
+            w_size: document.getElementById('w_size').value / 10,
+            w_amenities: document.getElementById('w_amenities').value / 10,
+            w_location: document.getElementById('w_location').value / 10
+        };
+
+        if (!payload.client_name) {
+            alert("Please enter a Client Name before saving.");
+            return;
+        }
+
+        const endpoint = isUpdate ? `/api/clients/${clientId}` : '/api/clients';
+        const method = isUpdate ? 'PUT' : 'POST';
+
+        const response = await fetch(endpoint, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+            resetForm();    
+            document.getElementById('searchInput').value = '';
+            fetchClients(); 
+        } else {
+            alert("Error: " + result.error);
+        }
+    }
+
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+
+    // --- NEW: MAP SEARCH FUNCTION ---
+    async function searchMapLocation() {
+        const query = document.getElementById('preferred_zone').value;
+        if (!query) {
+            alert("Please enter a location to search.");
+            return;
+        }
+
+        // Briefly change button text to show it's working
+        const btn = document.querySelector('button[onclick="searchMapLocation()"]');
+        const originalText = btn.innerText;
+        btn.innerText = "Searching...";
+        btn.disabled = true;
+
+        try {
+            // Ping the free OpenStreetMap API
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', Malaysia')}&format=json&limit=1`);
+            const data = await response.json();
+
+            if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+
+                // Update the numeric displays and global variables
+                updateSelectedCoordinates(lat, lon);
+
+                // Fly the map to the new location and snap the pin to the center!
+                clientMap.flyTo([lat, lon], 13, { duration: 1.5 }); 
+                selectedMarker.setLatLng([lat, lon]);
+            } else {
+                alert("Location not found. Try being more specific (e.g., 'UiTM Shah Alam').");
+            }
+        } catch (error) {
+            console.error("Geocoding error:", error);
+            alert("Network error while searching for location.");
+        } finally {
+            // Reset button
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    // Optional Quality-of-Life: Allow pressing "Enter" inside the text box to trigger the search
+    document.getElementById('preferred_zone').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); 
+            searchMapLocation();
+        }
+    });
+
+    async function fetchPropertyTypes() {
+        try {
+            const response = await fetch('/api/admin/property_types');
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                const typeSelect = document.getElementById('preferred_type_id');
+                // Don't overwrite the default "-- Any Property Type --" option
+                typeSelect.innerHTML = '<option value="">-- Any Property Type --</option>'; 
+                
+                result.data.forEach(pt => {
+                    typeSelect.innerHTML += `<option value="${pt.type_id}">${pt.display_name}</option>`;
+                });
+            }
+        } catch (error) {
+            console.error("Error loading property types:", error);
+        }
+    }
+
+</script>
+
+</body>
+</html>
