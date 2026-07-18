@@ -15,6 +15,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
 from flask import request, jsonify
 import pymysql
+from flask import redirect, url_for
 
 # Load the environment variables from the .env file
 load_dotenv()
@@ -109,6 +110,10 @@ def get_coordinates(location_name):
     return default_lat, default_lng
 
 # --- API ROUTES ---
+@app.route('/')
+def home():
+    # This assumes your login function is named 'login'
+    return redirect(url_for('login'))
 
 @app.route('/dashboard', methods=['GET'])
 def dashboard():
