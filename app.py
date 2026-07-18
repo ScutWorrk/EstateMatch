@@ -68,10 +68,11 @@ def generate_property_insight(property_name, wsm_score, budget, amenities):
         return "Insight currently unavailable."
     
 db_config = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': '',
-    'database': 'estate_match'
+    'host': 'mysql-22348d68-estatematch.j.aivencloud.com',
+    'port': 11130,
+    'user': 'avnadmin',
+    'password': db_password, # Safely uses the os.environ.get('DB_PASSWORD') you defined at the top
+    'database': 'defaultdb'
 }
 
 def get_db_connection():
