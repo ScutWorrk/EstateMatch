@@ -59,7 +59,7 @@ def generate_property_insight(property_name, wsm_score, budget, amenities):
     try:
         # The new SDK uses client.models.generate_content
         response = client.models.generate_content(
-            model='gemini-3.5-flash', 
+            model='gemini-2.0-flash', 
             contents=prompt
         )
         return response.text
@@ -132,7 +132,7 @@ def login():
         conn = get_db_connection()
         if conn:
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM Users WHERE username = %s", (username,))
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
             user = cursor.fetchone()
             cursor.close()
             conn.close()
