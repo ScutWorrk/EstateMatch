@@ -57,21 +57,21 @@ def generate_property_insight(property_name, wsm_score, budget, amenities):
     """
     
     try:
-        # The new SDK uses client.models.generate_content
+        # Corrected: Passed model as a string and added the missing comma
         response = client.models.generate_content(
-            model = genai.GenerativeModel('gemini-3.5-flash') 
+            model='gemini-3.5-flash', 
             contents=prompt
         )
         return response.text
     except Exception as e:
         print(f"AI Generation Error: {e}")
         return "Insight currently unavailable."
-    
+        
 db_config = {
     'host': 'mysql-22348d68-estatematch.j.aivencloud.com',
     'port': 11130,
     'user': 'avnadmin',
-    'password': db_password, # Safely uses the os.environ.get('DB_PASSWORD') you defined at the top
+    'password': db_password, 
     'database': 'defaultdb'
 }
 
