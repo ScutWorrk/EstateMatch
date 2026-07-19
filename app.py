@@ -168,7 +168,7 @@ def get_inventory():
 
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM Properties WHERE status = 'Active'")
+        cursor.execute("SELECT * FROM properties WHERE status = 'Active'")
         properties = cursor.fetchall()
         
         return jsonify({
