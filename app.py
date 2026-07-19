@@ -59,7 +59,7 @@ def generate_property_insight(property_name, wsm_score, budget, amenities):
     try:
         # The new SDK uses client.models.generate_content
         response = client.models.generate_content(
-            model='gemini-2.0-flash', 
+            model='gemini-1.5-flash', 
             contents=prompt
         )
         return response.text
