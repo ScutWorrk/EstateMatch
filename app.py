@@ -221,8 +221,8 @@ def get_recommendation():
         # Base query incorporating structural constraints and the Property_Types lookup table
         sql_query = """
             SELECT p.*, pt.display_name AS property_type_name, pt.floors
-            FROM Properties p
-            LEFT JOIN Property_Types pt ON p.type_id = pt.type_id
+            FROM properties p
+            LEFT JOIN property_types pt ON p.type_id = pt.type_id
             WHERE p.status = 'Active' 
               AND p.price <= %s 
               AND p.bedrooms >= %s
@@ -274,14 +274,14 @@ def manage_clients():
         cursor = conn.cursor(dictionary=True)
 
         # Ensure Agent ID 1 exists to satisfy Foreign Key constraints
-        cursor.execute("SELECT user_id FROM Users WHERE user_id = 1")
+        cursor.execute("SELECT user_id FROM users WHERE user_id = 1")
         if not cursor.fetchone():
-            cursor.execute("INSERT INTO Users (user_id, username, password_hash, role) VALUES (1, 'agent_sarah', 'hashed123', 'Agent')")
+            cursor.execute("INSERT INTO users (user_id, username, password_hash, role) VALUES (1, 'agent_sarah', 'hashed123', 'Agent')")
             conn.commit()
 
         # Handle GET request: Return list of saved clients including coordinates
         if request.method == 'GET':
-            cursor.execute("SELECT * FROM Client_Profiles WHERE agent_id = 1 ORDER BY client_id DESC")
+            cursor.execute("SELECT * FROM client_profiles WHERE agent_id = 1 ORDER BY client_id DESC")
             clients = cursor.fetchall()
             return jsonify({"status": "success", "data": clients})
 
@@ -291,7 +291,7 @@ def manage_clients():
             
             # ADDED preferred_type_id to the columns and an extra %s to VALUES
             sql = """
-                INSERT INTO Client_Profiles 
+                INSERT INTO client_profiles 
                 (agent_id, client_name, max_budget, preferred_zone, preferred_type_id, min_bedrooms, 
                  w_price, w_location, w_size, w_amenities, target_lat, target_lng)
                 VALUES (1, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -334,7 +334,7 @@ def modify_client(client_id):
         cursor = conn.cursor()
 
         if request.method == 'DELETE':
-            cursor.execute("DELETE FROM Client_Profiles WHERE client_id = %s", (client_id,))
+            cursor.execute("DELETE FROM client_profiles WHERE client_id = %s", (client_id,))
             conn.commit()
             return jsonify({"status": "success", "message": "Client deleted successfully!"})
 
@@ -346,7 +346,7 @@ def modify_client(client_id):
                 pref_type = None
                 
             sql = """
-                UPDATE Client_Profiles 
+                UPDATE client_profiles 
                 SET client_name = %s, max_budget = %s, preferred_zone = %s, 
                     preferred_type_id = %s, min_bedrooms = %s, w_price = %s, 
                     w_size = %s, w_amenities = %s, w_location = %s,
@@ -386,10 +386,10 @@ def get_admin_metrics():
     try:
         cursor = conn.cursor(dictionary=True)
         
-        cursor.execute("SELECT COUNT(*) as total FROM Properties")
+        cursor.execute("SELECT COUNT(*) as total FROM properties")
         total_listings = cursor.fetchone()['total']
 
-        cursor.execute("SELECT AVG(price) as avg_price FROM Properties")
+        cursor.execute("SELECT AVG(price) as avg_price FROM properties")
         avg_price_row = cursor.fetchone()
         avg_price = float(avg_price_row['avg_price']) if avg_price_row['avg_price'] else 0.0
 
@@ -402,7 +402,7 @@ def get_admin_metrics():
         else:
             market_stability = "Premium / Elevated"
 
-        cursor.execute("SELECT COUNT(*) as agent_count FROM Users WHERE role = 'Agent'")
+        cursor.execute("SELECT COUNT(*) as agent_count FROM users WHERE role = 'Agent'")
         active_agents = cursor.fetchone()['agent_count']
 
         return jsonify({
@@ -433,8 +433,8 @@ def manage_admin_inventory():
             # Join with Property_Types so the admin panel sees the human-readable display_name
             sql = """
                 SELECT p.*, pt.display_name AS property_type_name
-                FROM Properties p
-                LEFT JOIN Property_Types pt ON p.type_id = pt.type_id
+                FROM properties p
+                LEFT JOIN property_types pt ON p.type_id = pt.type_id
                 ORDER BY p.property_id DESC
             """
             cursor.execute(sql)
@@ -447,7 +447,7 @@ def manage_admin_inventory():
             
             # --- NEW: DUPLICATE PREVENTION ---
             # Check if this exact listing name already exists (case-insensitive)
-            cursor.execute("SELECT property_id FROM Properties WHERE LOWER(listing_name) = LOWER(%s)", (listing_name,))
+            cursor.execute("SELECT property_id FROM properties WHERE LOWER(listing_name) = LOWER(%s)", (listing_name,))
             if cursor.fetchone():
                 return jsonify({
                     "status": "error", 
@@ -458,7 +458,7 @@ def manage_admin_inventory():
             lat, lng = get_coordinates(listing_name)
             
             sql = """
-                INSERT INTO Properties 
+                INSERT INTO properties 
                 (listing_name, price, size_sqft, bedrooms, bathrooms, amenity_score, tenure, status, latitude, longitude) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
@@ -492,7 +492,7 @@ def manage_admin_inventory():
         cursor = conn.cursor(dictionary=True)
         
         if request.method == 'GET':
-            cursor.execute("SELECT * FROM Properties ORDER BY property_id DESC")
+            cursor.execute("SELECT * FROM properties ORDER BY property_id DESC")
             properties = cursor.fetchall()
             return jsonify({"status": "success", "data": properties})
 
@@ -503,7 +503,7 @@ def manage_admin_inventory():
             lat, lng = get_coordinates(data['listing_name'])
             
             sql = """
-                INSERT INTO Properties 
+                INSERT INTO properties 
                 (listing_name, price, size_sqft, bedrooms, bathrooms, amenity_score, tenure, status, latitude, longitude) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
@@ -553,11 +553,11 @@ def upload_inventory():
 
         # --- NEW: DUPLICATE PREVENTION SYSTEM ---
         # Fetch all existing property names and store them in a lowercase set for blazing-fast lookups
-        cursor.execute("SELECT listing_name FROM Properties")
+        cursor.execute("SELECT listing_name FROM properties")
         existing_properties = {row['listing_name'].lower().strip() for row in cursor.fetchall()}
 
         sql = """
-            INSERT INTO Properties 
+            INSERT INTO properties 
             (listing_name, price, size_sqft, bedrooms, bathrooms, amenity_score, tenure, status, latitude, longitude) 
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
@@ -613,14 +613,14 @@ def modify_inventory_item(property_id):
         cursor = conn.cursor()
 
         if request.method == 'DELETE':
-            cursor.execute("DELETE FROM Properties WHERE property_id = %s", (property_id,))
+            cursor.execute("DELETE FROM properties WHERE property_id = %s", (property_id,))
             conn.commit()
             return jsonify({"status": "success", "message": "Property deleted successfully!"})
 
         if request.method == 'PUT':
             data = request.get_json()
             sql = """
-                UPDATE Properties 
+                UPDATE properties 
                 SET listing_name = %s, price = %s, status = %s 
                 WHERE property_id = %s
             """
@@ -646,7 +646,7 @@ def manage_admin_users():
         cursor = conn.cursor(dictionary=True)
         
         if request.method == 'GET':
-            cursor.execute("SELECT user_id, username, role FROM Users ORDER BY user_id DESC")
+            cursor.execute("SELECT user_id, username, role FROM users ORDER BY user_id DESC")
             users = cursor.fetchall()
             return jsonify({"status": "success", "data": users})
 
@@ -660,7 +660,7 @@ def manage_admin_users():
                 
             hashed_password = generate_password_hash(raw_password)
             
-            sql = "INSERT INTO Users (username, password_hash, role) VALUES (%s, %s, %s)"
+            sql = "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)"
             values = (data['username'], hashed_password, data['role'])
             cursor.execute(sql, values)
             conn.commit()
@@ -683,7 +683,7 @@ def modify_admin_user(user_id):
         cursor = conn.cursor()
 
         if request.method == 'DELETE':
-            cursor.execute("DELETE FROM Users WHERE user_id = %s", (user_id,))
+            cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
             conn.commit()
             return jsonify({"status": "success", "message": "User deleted successfully!"})
 
@@ -694,10 +694,10 @@ def modify_admin_user(user_id):
             
             if new_password:
                 hashed_password = generate_password_hash(new_password)
-                sql = "UPDATE Users SET username = %s, role = %s, password_hash = %s WHERE user_id = %s"
+                sql = "UPDATE users SET username = %s, role = %s, password_hash = %s WHERE user_id = %s"
                 values = (data['username'], data['role'], hashed_password, user_id)
             else:
-                sql = "UPDATE Users SET username = %s, role = %s WHERE user_id = %s"
+                sql = "UPDATE users SET username = %s, role = %s WHERE user_id = %s"
                 values = (data['username'], data['role'], user_id)
                 
             cursor.execute(sql, values)
@@ -720,7 +720,7 @@ def get_property_types():
         cursor = conn.cursor(dictionary=True)
         
         # ADDED 'floors' to the SELECT statement
-        cursor.execute("SELECT type_id, display_name, floors FROM Property_Types ORDER BY type_id ASC")
+        cursor.execute("SELECT type_id, display_name, floors FROM property_types ORDER BY type_id ASC")
         types = cursor.fetchall()
         
         return jsonify({"status": "success", "data": types})
@@ -752,10 +752,10 @@ def update_profile():
     # If the user typed a new password, hash it before saving!
     if password:
         hashed_pw = generate_password_hash(password)
-        cursor.execute("UPDATE Users SET username=%s, ren_license=%s, agency_name=%s, profile_pic=%s, password_hash=%s WHERE user_id=%s", 
+        cursor.execute("UPDATE users SET username=%s, ren_license=%s, agency_name=%s, profile_pic=%s, password_hash=%s WHERE user_id=%s", 
                        (username, ren_license, agency_name, filename, hashed_pw, user_id))
     else:
-        cursor.execute("UPDATE Users SET username=%s, ren_license=%s, agency_name=%s, profile_pic=%s WHERE user_id=%s", 
+        cursor.execute("UPDATE users SET username=%s, ren_license=%s, agency_name=%s, profile_pic=%s WHERE user_id=%s", 
                        (username, ren_license, agency_name, filename, user_id))
     
     conn.commit()
@@ -771,7 +771,7 @@ def get_profile():
     # Use dictionary=True so we can access columns by name (e.g., user['username'])
     cursor = conn.cursor(dictionary=True) 
     
-    cursor.execute("SELECT username, ren_license, agency_name, profile_pic FROM Users WHERE user_id = %s", (user_id,))
+    cursor.execute("SELECT username, ren_license, agency_name, profile_pic FROM users WHERE user_id = %s", (user_id,))
     user = cursor.fetchone()
     
     conn.close()
